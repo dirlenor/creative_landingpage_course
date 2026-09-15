@@ -50,12 +50,27 @@
     gsap.to('.circle-badge svg', { rotation: 360, transformOrigin: '50% 50%', duration: 20, repeat: -1, ease: 'none' });
     gsap.to('.client-track', { xPercent: -50, duration: 25, repeat: -1, ease: 'none' });
 
-    document.querySelectorAll('.panel, .journal, footer').forEach(section => {
+    document.querySelectorAll('.panel, footer').forEach(section => {
       const elements = [...section.children].filter(el => !el.matches('.geometry'));
       gsap.from(elements, {
         y: 34, autoAlpha: 0, duration: .95, stagger: .13, ease: 'power3.out',
         clearProps: 'transform,opacity,visibility',
         scrollTrigger: { trigger: section, start: 'top 88%', once: true }
+      });
+    });
+    document.querySelectorAll('.process-header, .process-step, .ai-header, .ai-column, .ai-art').forEach(section => {
+      gsap.from(section, {
+        y: 30, autoAlpha: 0, duration: .85, ease: 'power3.out',
+        clearProps: 'transform,opacity,visibility',
+        scrollTrigger: { trigger: section, start: 'top 92%', once: true }
+      });
+    });
+    // Animate card contents for entrances so hover can independently scale the card.
+    document.querySelectorAll('.ai-list').forEach(list => {
+      gsap.from(list.querySelectorAll('li > div'), {
+        y: 16, autoAlpha: 0, stagger: .075, duration: .6,
+        clearProps: 'transform,opacity,visibility',
+        scrollTrigger: { trigger: list, start: 'top 92%', once: true }
       });
     });
     gsap.fromTo('.geometry', { y: 28, rotation: -5 }, {
@@ -90,6 +105,34 @@
     };
   });
   const refresh = () => ScrollTrigger.refresh();
+  media.add('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)', () => {
+    const cleanups = [];
+    document.querySelectorAll('.process-step').forEach(step => {
+      const img = step.querySelector('img');
+      const lift = gsap.timeline({ paused: true })
+        .to(img, { y: -12, scale: 1.055, rotation: -4, duration: .45, ease: 'power3.out' });
+      const enter = () => lift.play();
+      const leave = () => lift.reverse();
+      step.addEventListener('pointerenter', enter);
+      step.addEventListener('pointerleave', leave);
+      cleanups.push(() => { step.removeEventListener('pointerenter', enter); step.removeEventListener('pointerleave', leave); });
+    });
+    document.querySelectorAll('.ai-list li').forEach(card => {
+      const img = card.querySelector('img');
+      const grow = gsap.to(card, { scale: 1.035, duration: .3, ease: 'power2.out', paused: true });
+      const wiggle = gsap.timeline({ paused: true })
+        .to(img, { rotation: -10, y: -3, duration: .12 })
+        .to(img, { rotation: 10, duration: .17 })
+        .to(img, { rotation: -6, duration: .15 })
+        .to(img, { rotation: 0, y: 0, duration: .22, ease: 'power2.out' });
+      const enter = () => { grow.play(); wiggle.restart(); };
+      const leave = () => { grow.reverse(); wiggle.reverse(); };
+      card.addEventListener('pointerenter', enter);
+      card.addEventListener('pointerleave', leave);
+      cleanups.push(() => { card.removeEventListener('pointerenter', enter); card.removeEventListener('pointerleave', leave); });
+    });
+    return () => cleanups.forEach(cleanup => cleanup());
+  });
   media.add('(min-width: 761px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)', () => {
     const hero = document.querySelector('.hero');
     const art = hero.querySelector('.hero-art');
@@ -173,7 +216,7 @@
     };
   });
   // The duplicate is visual only; the original heading remains the accessible text.
-  const spotlights = document.querySelectorAll('.featured h2, .services h2, .studio h2, .journal h2, footer h2');
+  const spotlights = document.querySelectorAll('.featured h2, .services h2, .studio h2, .journal h2, #ai-title, footer h2');
   spotlights.forEach(heading => {
     const light = document.createElement('span');
     light.className = 'heading-light';

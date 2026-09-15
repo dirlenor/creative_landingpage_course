@@ -64,7 +64,11 @@
 .preloader{background:#fff;color:var(--ink)}
 .preloader-line{background:var(--orange)}
 .page-transition{position:fixed;inset:0;z-index:1001;display:none;overflow:hidden;pointer-events:none}
-.page-transition>div{flex:1 0 25%;height:100%;background:#000;will-change:transform}
+.page-transition>div{position:absolute;top:0;width:calc(25% + 2px);height:100%;background:#000;will-change:transform}
+.page-transition>div:nth-child(1){left:0}
+.page-transition>div:nth-child(2){left:25%}
+.page-transition>div:nth-child(3){left:50%}
+.page-transition>div:nth-child(4){left:75%}
 @media(prefers-reduced-motion:reduce){.page-transition{display:none!important}}
 @media(max-width:760px){.brand{width:108px;height:68px}.brand-logo{width:108px}}
 

@@ -57,4 +57,13 @@
 .brand-logo{width:128px;max-width:none;height:auto}
 .preloader-brand{width:min(440px,78vw);font:inherit;letter-spacing:normal}
 .preloader-brand img{width:100%;height:auto}
+@media(min-width:761px) and (hover:hover) and (pointer:fine){
+  .hero{perspective:1400px}
+  .hero-art{transform-origin:50% 65%;backface-visibility:hidden}
+}
+.preloader{background:#fff;color:var(--ink)}
+.preloader-line{background:var(--orange)}
+.page-transition{position:fixed;inset:0;z-index:1001;display:none;overflow:hidden;pointer-events:none}
+.page-transition>div{flex:1 0 25%;height:100%;background:#000;will-change:transform}
+@media(prefers-reduced-motion:reduce){.page-transition{display:none!important}}
 @media(max-width:760px){.brand{width:108px;height:68px}.brand-logo{width:108px}}

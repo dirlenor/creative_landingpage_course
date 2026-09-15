@@ -4,8 +4,10 @@
   gsap.registerPlugin(ScrollTrigger);
   document.documentElement.classList.add('gsap-ready');
   const loader = document.querySelector('.preloader');
+  const transition = document.querySelector('.page-transition');
   const media = gsap.matchMedia();
   let introPlayed = false;
+  let heroReady = false;
   // Keep each word's natural kerning/width stable while animating individual glyphs.
   document.querySelectorAll('.word-create, .word-design').forEach(word => {
     const characters = [...word.textContent].map(letter => {
@@ -18,17 +20,26 @@
   });
 
   media.add('(prefers-reduced-motion: no-preference)', () => {
-    const intro = gsap.timeline({ defaults: { duration: .8, ease: 'power3.out' } });
+    heroReady = false;
+    const intro = gsap.timeline({ defaults: { duration: .8, ease: 'power3.out' }, onComplete: () => { heroReady = true; } });
     if (!introPlayed) {
       introPlayed = true;
       loader.style.display = 'flex';
+      gsap.set(transition, { display: 'flex' });
+      // Explicitly reset pixel translation so it cannot add to percentage travel.
+      gsap.set('.page-transition > div', { y: 0, yPercent: 100 });
       // A short brand introduction, not a simulated download percentage.
       intro.from('.preloader-brand', { y: 25, autoAlpha: 0, duration: .5 })
         .from('.preloader-line', { scaleX: 0, transformOrigin: 'left', duration: .65 }, .15)
-        .to(loader, { yPercent: -100, duration: .7, ease: 'power3.inOut' }, .85)
-        .set(loader, { display: 'none' });
+        .addLabel('cover', .55)
+        .to('.page-transition > div', { y: 0, yPercent: 0, duration: .85, stagger: .12, ease: 'power2.inOut' }, 'cover')
+        .addLabel('covered')
+        .set(loader, { display: 'none' }, 'covered')
+        .addLabel('uncover', 'covered+=.05')
+        .to('.page-transition > div', { y: 0, yPercent: -101, duration: 1, stagger: .12, ease: 'power2.inOut' }, 'uncover');
+      // Keep the wrapper mounted; the panels leave by travelling beyond the viewport.
     }
-    intro.addLabel('reveal', Math.max(0, intro.duration() - .25))
+    intro.addLabel('reveal', intro.labels.uncover !== undefined ? intro.labels.uncover + .25 : 0)
       .from('.header .brand, .header nav a, .project-link, .menu-toggle', { y: -14, autoAlpha: 0, stagger: .065, clearProps: 'all' }, 'reveal')
       .from('#hero-title > span', { y: 55, autoAlpha: 0, stagger: .14, duration: 1, clearProps: 'all' }, 'reveal+=.1')
       .from('.hero-art', { y: 35, scale: .97, autoAlpha: 0, duration: 1.2, clearProps: 'all' }, 'reveal+=.28')
@@ -65,13 +76,12 @@
     word.addEventListener('focus', enter);
     word.addEventListener('blur', blur);
     // Dynamic callbacks control existing timelines rather than creating untracked tweens.
-    const finish = () => { intro.progress(1); loader.style.display = 'none'; };
+    const finish = () => { intro.progress(1); loader.style.display = 'none'; transition.style.display = 'none'; };
     const escape = event => { if (event.key === 'Escape') finish(); };
     document.addEventListener('keydown', escape);
-    const watchdog = setTimeout(finish, 5000);
     return () => {
-      clearTimeout(watchdog);
       loader.style.display = 'none';
+      transition.style.display = 'none';
       document.removeEventListener('keydown', escape);
       word.removeEventListener('pointerenter', enter);
       word.removeEventListener('pointerleave', leave);
@@ -80,6 +90,32 @@
     };
   });
   const refresh = () => ScrollTrigger.refresh();
+  media.add('(min-width: 761px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)', () => {
+    const hero = document.querySelector('.hero');
+    const art = hero.querySelector('.hero-art');
+    // Reusable tweens keep pointer updates light. Start only after the entrance finishes.
+    const tiltX = gsap.quickTo(art, 'rotationX', { duration: .8, ease: 'power3.out' });
+    const tiltY = gsap.quickTo(art, 'rotationY', { duration: .8, ease: 'power3.out' });
+    const shiftX = gsap.quickTo(art, 'x', { duration: .8, ease: 'power3.out' });
+    const move = event => {
+      if (!heroReady || event.pointerType !== 'mouse') return;
+      const rect = hero.getBoundingClientRect();
+      const x = Math.max(-1, Math.min(1, (event.clientX - rect.left) / rect.width * 2 - 1));
+      const y = Math.max(-1, Math.min(1, (event.clientY - rect.top) / rect.height * 2 - 1));
+      tiltX(-y * 2.5);
+      tiltY(x * 3.5);
+      shiftX(x * 5);
+    };
+    const reset = () => { if (heroReady) { tiltX(0); tiltY(0); shiftX(0); } };
+    hero.addEventListener('pointermove', move, { passive: true });
+    hero.addEventListener('pointerleave', reset);
+    window.addEventListener('blur', reset);
+    return () => {
+      hero.removeEventListener('pointermove', move);
+      hero.removeEventListener('pointerleave', reset);
+      window.removeEventListener('blur', reset);
+    };
+  });
   // One persistent companion follows the pointer and banks toward its travel direction.
   media.add('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)', () => {
     const trail = document.createElement('div');
